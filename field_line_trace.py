@@ -37,8 +37,6 @@ class MultiTubeGyrokineticObjective(Optimizable):
             (np.pi, np.pi / nfp)
         ]
 
-        # We will collect a specific scalar metric for each tube
-        # (e.g., the variance of feature f3)
         tube_metrics = []
 
         for i in range(self.n_tubes):
@@ -51,29 +49,17 @@ class MultiTubeGyrokineticObjective(Optimizable):
             alpha_target = theta_c - iota_s * phi_c
 
             # 2. Track line
-            aspect_ratio = self.vmec.aspect()
-            target_length_in_minor_radii = 75.0
+            target_N_tor = 2.0
 
-            # N_pol = (Target Length / Toroidal Circumference) * |iota|
-            N_pol_exact = (target_length_in_minor_radii / (2 * np.pi * aspect_ratio)) * abs(iota_s)
-
-            # Add a 50% safety factor to guarantee the line exceeds 75a,
-            # and ensure a minimum of at least 1 turn.
-            poloidal_turns = max(1.0, N_pol_exact * 1.5)
-            theta1d = np.linspace(theta_c - poloidal_turns * np.pi,
+            # N_pol = N_tor * |iota|
+            poloidal_turns = target_N_tor * abs(iota_s)
+            theta1d = np.linspace(theta_c - poloidal_turns + np.pi,
                                   theta_c + poloidal_turns * np.pi, 3000)
 
             fl = vmec_fieldlines(self.vmec, s_target, alpha_target, theta1d=theta1d)
 
-            # 3. Compute arclength (z)
-            L_ref = fl.L_reference
-            gradpar = fl.gradpar_theta_pest[0, 0, :]
-            z_raw = cumulative_trapezoid(L_ref / gradpar, fl.theta_pest[0, 0, :], initial=0.0)
-
-            # Shift z
-            z_shifted = z_raw - z_raw[len(theta1d) // 2]
-
             # 4. Extract raw features
+            L_ref = fl.L_reference
             s = s_target
             alpha = alpha_target
             psi_a = fl.edge_toroidal_flux_over_2pi
@@ -117,23 +103,11 @@ class MultiTubeGyrokineticObjective(Optimizable):
                     s * grad_alpha2
             )
 
-            # 5. Interpolate onto uniform 75*a grid
-            target_length = 75.0 * L_ref
-            z_uniform = np.linspace(-target_length / 2, target_length / 2, 500)
-
-            f1_final = interp1d(z_shifted, f1_raw, kind='cubic')(z_uniform)
-            f2_final = interp1d(z_shifted, f2_raw, kind='cubic')(z_uniform)
-            f3_final = interp1d(z_shifted, f3_raw, kind='cubic')(z_uniform)
-            f4_final = interp1d(z_shifted, f4_raw, kind='cubic')(z_uniform)
-            f5_final = interp1d(z_shifted, f5_raw, kind='cubic')(z_uniform)
-            f6_final = interp1d(z_shifted, f6_raw, kind='cubic')(z_uniform)
-            f7_final = interp1d(z_shifted, f7_raw, kind='cubic')(z_uniform)
-
-            target_1 = np.var(sigmoid((f1_final ** 2) * f4_final) * f5_final / f1_final)
-            target_2 = np.mean(sigmoid((f1_final ** 2) * f4_final) * (f5_final ** 4) / (f1_final ** 2))
-            target_3 = np.mean(sigmoid((f1_final ** 2) * f4_final) * (f5_final ** 2) / f1_final)
-            target_4 = np.var(sigmoid((f1_final ** 2) * f4_final) * (f5_final ** 2) / f1_final)
-            target_5 = np.mean(sigmoid((f1_final ** 2) * f4_final) * (f5_final ** 2) / (f1_final ** 2))
+            target_1 = np.var(sigmoid((f1_raw ** 2) * f4_raw) * f5_raw / f1_raw)
+            target_2 = np.mean(sigmoid((f1_raw ** 2) * f4_raw) * (f5_raw ** 4) / (f1_raw ** 2))
+            target_3 = np.mean(sigmoid((f1_raw ** 2) * f4_raw) * (f5_raw ** 2) / f1_raw)
+            target_4 = np.var(sigmoid((f1_raw ** 2) * f4_raw) * (f5_raw ** 2) / f1_raw)
+            target_5 = np.mean(sigmoid((f1_raw ** 2) * f4_raw) * (f5_raw ** 2) / (f1_raw ** 2))
             tube_metrics.append(target_1)
 
         return tube_metrics
