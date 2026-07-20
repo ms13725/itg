@@ -8,7 +8,7 @@ from simsopt.solve import least_squares_mpi_solve
 
 
 class MultiSurfaceGyrokineticObjective(Optimizable):
-    def __init__(self, vmec, n_surfaces=4, n_theta=32, n_phi=32):
+    def __init__(self, vmec, n_surfaces=4, n_theta=16, n_phi=16):
         self.vmec = vmec
 
         # Define the radial targets
@@ -50,16 +50,11 @@ class MultiSurfaceGyrokineticObjective(Optimizable):
             iota_val = np.interp(s_val, self.vmec.s_half_grid, self.vmec.wout.iotas[1:])
 
             # Extract the 2D surface data for this specific radial depth
-            f1 = geom.modB[i, :, :]
             grad_s2 = geom.grad_s_dot_grad_s[i, :, :]
-
             B_cross_kappa_psi = geom.B_cross_kappa_dot_grad_psi[i, :, :]
             B_cross_kappa_alpha = geom.B_cross_kappa_dot_grad_alpha[i, :, :]
-
-            # Additional arrays required for f2, f3, f6, f7
             B_cross_grad_B_psi = geom.B_cross_grad_B_dot_grad_psi[i, :, :]
             B_cross_grad_B_alpha = geom.B_cross_grad_B_dot_grad_alpha[i, :, :]
-
             grad_alpha_psi = geom.grad_alpha_dot_grad_psi[i, :, :]
             grad_alpha2 = geom.grad_alpha_dot_grad_alpha[i, :, :]
 
@@ -71,6 +66,8 @@ class MultiSurfaceGyrokineticObjective(Optimizable):
             alpha = theta_mesh - iota_val * phi_mesh
 
             # assembling features
+            f1 = geom.modB[i, :, :]
+
             f2 = (L_ref / (2 * np.sqrt(s_val) * psi_a)) * B_cross_grad_B_psi / (f1 ** 3)
 
             f3 = -L_ref * sign_psi_a * (
@@ -112,17 +109,34 @@ class MultiSurfaceGyrokineticObjective(Optimizable):
 
 mpi = MpiPartition()
 
-max_mode = 1
-v = Vmec('input.LandremanPaul2021_QA_lowres', mpi)
-surf = v.boundary
-surf.fix_all()
-surf.fixed_range(mmin=0, mmax=max_mode,
-                 nmin=-max_mode, nmax=max_mode, fixed=False)
-surf.fix("rc(0,0)")  # Major radius
+vmec = Vmec('input.LandremanPaul2021_QA_lowres', mpi)
+surf = vmec.boundary
+gk_multi_obj = MultiSurfaceGyrokineticObjective(vmec)
+prob = LeastSquaresProblem.from_tuples([
+    (vmec.aspect, 6, 1),
+    (vmec.mean_iota, 0.42, 1),
+    (gk_multi_obj.J, 0, 1),
+])
 
-gk_multi_obj = MultiSurfaceGyrokineticObjective(v)
-prob = LeastSquaresProblem.from_sigma([0.0, 6.0], [1.0, 0.1], [gk_multi_obj.J, v.aspect])
+for step in range(3):
+    max_mode = step + 1
+    vmec.indata.mpol = 3 + step
+    vmec.indata.ntor = vmec.indata.mpol
 
-print(f"Initial Multi-surface Metric: {gk_multi_obj.J()}")
-least_squares_mpi_solve(prob, mpi, grad=True)
-print(f"Final Multi-surface Metric: {gk_multi_obj.J()}")
+    if mpi.proc0_world:
+        print(f'Beginning optimization with max_mode = {max_mode}\n'
+              f'vmec mpol=ntor = {vmec.indata.mpol}\n'
+              f'Previous vmec iteration = {vmec.iter}')
+
+    # Define parameter space:
+    surf.fix_all()
+    surf.fixed_range(mmin=0, mmax=max_mode,
+                     nmin=-max_mode, nmax=max_mode, fixed=False)
+    surf.fix("rc(0,0)")  # Major radius
+
+    # Carry out the optimization for this step:
+    least_squares_mpi_solve(prob, mpi, grad=True)
+
+    if mpi.proc0_world:
+        print(f'Done optimization with max_mode = {max_mode}\n'
+              f'Final vmec iteration = {vmec.iter}')
