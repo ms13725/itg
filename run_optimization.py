@@ -42,9 +42,9 @@ prob = LeastSquaresProblem.from_tuples([
     (gk_multi_obj.J, 0, 1),
 ])
 
-for step in range(3):
+for step in range(2):
     max_mode = step + 1
-    vmec.indata.mpol = 3 + step
+    vmec.indata.mpol = 2 + step
     vmec.indata.ntor = vmec.indata.mpol
 
     if mpi.proc0_world:
@@ -58,7 +58,7 @@ for step in range(3):
                      nmin=-max_mode, nmax=max_mode, fixed=False)
     surf.fix("rc(0,0)")
 
-    least_squares_mpi_solve(prob, mpi, grad=True)
+    least_squares_mpi_solve(prob, mpi, grad=True, max_nfev=20)
 
     if mpi.proc0_world:
         print(f'Done optimization with max_mode = {max_mode}\n'

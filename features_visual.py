@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.special import expit as sigmoid
+import pyvista as pv
 from simsopt.mhd import Vmec, vmec_compute_geometry
 from simsopt.geo import SurfaceRZFourier
 
@@ -7,7 +9,19 @@ v_final = Vmec(wout_file)
 
 n_surfaces = 10
 s_1d = np.linspace(0.1, 1.0, n_surfaces)
+
 surf = SurfaceRZFourier.from_wout(wout_file, s=1.0, ntheta=64, nphi=64)
+
+# nphi = 64
+# ntheta = 64
+# quadpoints_phi = np.linspace(0, 1, nphi, endpoint=True)
+# quadpoints_theta = np.linspace(0, 1, ntheta, endpoint=True)
+# surf = SurfaceRZFourier.from_wout(
+#     wout_file,
+#     s=1.0,
+#     quadpoints_phi=quadpoints_phi,
+#     quadpoints_theta=quadpoints_theta
+# )
 
 theta_1d = surf.quadpoints_theta * 2 * np.pi
 phi_1d = surf.quadpoints_phi * 2 * np.pi
@@ -64,41 +78,46 @@ f7 = L_ref ** 2 * (
         s_3d * grad_alpha2
 )
 
-# Extract Outer Surface
-f1_outer = f1[-1, :, :]
-f2_outer = f2[-1, :, :]
-f3_outer = f3[-1, :, :]
-f4_outer = f4[-1, :, :]
-f5_outer = f5[-1, :, :]
-f6_outer = f6[-1, :, :]
-f7_outer = f7[-1, :, :]
+# variance targets
+t1 = sigmoid((f1 ** 2) * f4) * f5 / f1
+t4 = sigmoid((f1 ** 2) * f4) * (f5 ** 2) / f1
 
-# Calculate Radial Averages across all surfaces
-f1_avg = np.mean(f1, axis=0)
-f2_avg = np.mean(f2, axis=0)
-f3_avg = np.mean(f3, axis=0)
-f4_avg = np.mean(f4, axis=0)
-f5_avg = np.mean(f5, axis=0)
-f6_avg = np.mean(f6, axis=0)
-f7_avg = np.mean(f7, axis=0)
+# squared deviations use mean of each surface, not mean of whole 3d array
+t1_deviation = (t1 - np.mean(t1, axis=(1, 2), keepdims=True)) ** 2
+t4_deviation = (t4 - np.mean(t4, axis=(1, 2), keepdims=True)) ** 2
+
+# mean targets
+t2 = sigmoid((f1 ** 2) * f4) * (f5 ** 4) / (f1 ** 2)
+t3 = sigmoid((f1 ** 2) * f4) * (f5 ** 2) / f1
+t5 = sigmoid((f1 ** 2) * f4) * (f5 ** 2) / (f1 ** 2)
+
+# outer surfaces
+t1_outer = t1_deviation[-1, :, :]
+t2_outer = t2[-1, :, :]
+t3_outer = t3[-1, :, :]
+t4_outer = t4_deviation[-1, :, :]
+t5_outer = t5[-1, :, :]
+
+# radial averages across surfaces
+t1_avg = np.mean(t1_deviation, axis=0)
+t2_avg = np.mean(t2, axis=0)
+t3_avg = np.mean(t3, axis=0)
+t4_avg = np.mean(t4_deviation, axis=0)
+t5_avg = np.mean(t5, axis=0)
 
 surf.to_vtk(
-    "outermost_surface",
+    "objectives_plot",
     extra_data={
-        'f1_outer': f1_outer.T[:, :, None],
-        'f2_outer': f2_outer.T[:, :, None],
-        'f3_outer': f3_outer.T[:, :, None],
-        'f4_outer': f4_outer.T[:, :, None],
-        'f5_outer': f5_outer.T[:, :, None],
-        'f6_outer': f6_outer.T[:, :, None],
-        'f7_outer': f7_outer.T[:, :, None],
+        't1_outer': t1_outer.T[:, :, None],
+        't2_outer': t2_outer.T[:, :, None],
+        't3_outer': t3_outer.T[:, :, None],
+        't4_outer': t4_outer.T[:, :, None],
+        't5_outer': t5_outer.T[:, :, None],
 
-        'f1_avg': f1_avg.T[:, :, None],
-        'f2_avg': f2_avg.T[:, :, None],
-        'f3_avg': f3_avg.T[:, :, None],
-        'f4_avg': f4_avg.T[:, :, None],
-        'f5_avg': f5_avg.T[:, :, None],
-        'f6_avg': f6_avg.T[:, :, None],
-        'f7_avg': f7_avg.T[:, :, None]
+        't1_avg': t1_avg.T[:, :, None],
+        't2_avg': t2_avg.T[:, :, None],
+        't3_avg': t3_avg.T[:, :, None],
+        't4_avg': t4_avg.T[:, :, None],
+        't5_avg': t5_avg.T[:, :, None]
     }
 )
