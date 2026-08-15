@@ -4,7 +4,7 @@ from simsopt._core.optimizable import Optimizable
 from simsopt.mhd import vmec_compute_geometry
 
 
-class MultiSurfaceGyrokineticObjective(Optimizable):
+class MultiSurfaceTurbulenceObjective(Optimizable):
     def __init__(self, vmec, n_surfaces=4, n_theta=16, n_phi=16):
         self.vmec = vmec
 

@@ -2,3 +2,6 @@
 *.DS_Store
 *.vts
 *.nc
+*.dat
+*.json
+*.pdf

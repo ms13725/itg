@@ -1,28 +1,65 @@
+import glob
+import re
+import sys
+import argparse
 import numpy as np
 from scipy.special import expit as sigmoid
-import pyvista as pv
 from simsopt.mhd import Vmec, vmec_compute_geometry
 from simsopt.geo import SurfaceRZFourier
 
-wout_file = 'wout_6_14.nc'
-v_final = Vmec(wout_file)
+parser = argparse.ArgumentParser(description="Generate Paraview file from the latest VMEC wout file.")
+parser.add_argument("prefix", type=str, help="Prefix of the wout file")
+args = parser.parse_args()
 
-n_surfaces = 10
-s_1d = np.linspace(0.1, 1.0, n_surfaces)
+file_pattern = f"wout_{args.prefix}_*.nc"
+files = glob.glob(file_pattern)
 
-surf = SurfaceRZFourier.from_wout(wout_file, s=1.0, ntheta=64, nphi=64)
+if not files:
+    print(f"Error: No files found matching pattern {file_pattern}", file=sys.stderr)
+    sys.exit(1)
 
-# nphi = 64
-# ntheta = 64
-# quadpoints_phi = np.linspace(0, 1, nphi, endpoint=True)
-# quadpoints_theta = np.linspace(0, 1, ntheta, endpoint=True)
-# surf = SurfaceRZFourier.from_wout(
-#     wout_file,
-#     s=1.0,
+
+def extract_suffix(filepath):
+    match = re.search(r'_(\d+)\.nc$', filepath)
+    return int(match.group(1)) if match else -1
+
+
+config = {'surface_method': 'from_wout'}
+surf_filename = max(files, key=extract_suffix)
+print(f'building paraview plot from {surf_filename}')
+
+surf_filename = 'wout_nfp4_QH_warm_start_000_000341.nc'
+v_final = Vmec(surf_filename)
+
+# surface_constructor = getattr(SurfaceRZFourier, config["surface_method"])
+#
+# qphi = 64
+# qtheta = 64
+# quadpoints_phi = np.linspace(0, 1, qphi, endpoint=True)
+# quadpoints_theta = np.linspace(0, 1, qtheta, endpoint=True)
+# surf = surface_constructor(
+#     surf_filename,
+#     range="full torus",
 #     quadpoints_phi=quadpoints_phi,
 #     quadpoints_theta=quadpoints_theta
 # )
 
+# surf = SurfaceRZFourier.from_wout(surf_filename, s=1.0, ntheta=64, nphi=64)
+
+nphi = 64
+ntheta = 64
+quadpoints_phi = np.linspace(0, 1, nphi, endpoint=True)
+quadpoints_theta = np.linspace(0, 1, ntheta, endpoint=True)
+surf = SurfaceRZFourier.from_wout(
+    surf_filename,
+    range='full_torus',
+    s=1.0,
+    quadpoints_phi=quadpoints_phi,
+    quadpoints_theta=quadpoints_theta
+)
+
+n_surfaces = 10
+s_1d = np.linspace(0.1, 1.0, n_surfaces)
 theta_1d = surf.quadpoints_theta * 2 * np.pi
 phi_1d = surf.quadpoints_phi * 2 * np.pi
 
@@ -106,7 +143,7 @@ t4_avg = np.mean(t4_deviation, axis=0)
 t5_avg = np.mean(t5, axis=0)
 
 surf.to_vtk(
-    "objectives_plot",
+    "objectives_nfp4_test",
     extra_data={
         't1_outer': t1_outer.T[:, :, None],
         't2_outer': t2_outer.T[:, :, None],

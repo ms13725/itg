@@ -1,72 +1,42 @@
-import numpy as np
-import json
+import argparse
 from simsopt.mhd import Vmec
 from simsopt.util import MpiPartition
 from simsopt.objectives import LeastSquaresProblem
 from simsopt.solve import least_squares_mpi_solve
-from grid_geom_features import MultiSurfaceGyrokineticObjective
+from grid_geom_features import MultiSurfaceTurbulenceObjective
+
+parser = argparse.ArgumentParser(
+    description="Run VMEC optimization with target parameters."
+)
+parser.add_argument("vmec_filename", type=str, help="Path to the VMEC input file")
+parser.add_argument("aspect_target", type=float, help="Target aspect ratio")
+parser.add_argument("iota_target", type=float, help="Target mean iota")
+# parser.add_argument("turb_target", type=float, help="Target turbulence objective value")
+
+args = parser.parse_args()
 
 mpi = MpiPartition()
 
-if mpi.proc0_world:
-    history = {
-        'aspect': [],
-        'iota': [],
-        'gk_obj': []
-    }
-
-
-class LoggedMultiGkObj(MultiSurfaceGyrokineticObjective):
-    def J(self):
-        val = super().J()
-
-        if mpi.proc0_world:
-            history['aspect'].append(self.vmec.aspect())
-            history['iota'].append(self.vmec.mean_iota())
-            history['gk_obj'].append(float(np.linalg.norm(val)))
-
-        return val
-
-
-vmec = Vmec('input.LandremanPaul2021_QA_lowres', mpi)
+vmec = Vmec(args.vmec_filename, mpi)
 surf = vmec.boundary
 
-# Instantiate Logged subclass instead of the original
-gk_multi_obj = LoggedMultiGkObj(vmec)
+turb_obj = MultiSurfaceTurbulenceObjective(vmec)
 
-# Now gk_multi_obj.J is a bound method of an Optimizable object,
-# so it has the __self__ attribute simsopt expects.
+
 prob = LeastSquaresProblem.from_tuples([
-    (vmec.aspect, 6, 1),
-    (vmec.mean_iota, 0.42, 1),
-    (gk_multi_obj.J, 0, 1),
+    (vmec.aspect, args.aspect_target, 1),
+    (vmec.mean_iota, args.iota_target, 1),
+    (turb_obj.J, 0.0, 1),
 ])
 
-for step in range(2):
+for step in range(3):
     max_mode = step + 1
     vmec.indata.mpol = 2 + step
     vmec.indata.ntor = vmec.indata.mpol
 
-    if mpi.proc0_world:
-        print(f'Beginning optimization with max_mode = {max_mode}\n'
-              f'vmec mpol=ntor = {vmec.indata.mpol}\n'
-              f'Previous vmec iteration = {vmec.iter}')
-
-    # Define parameter space
     surf.fix_all()
     surf.fixed_range(mmin=0, mmax=max_mode,
                      nmin=-max_mode, nmax=max_mode, fixed=False)
     surf.fix("rc(0,0)")
 
-    least_squares_mpi_solve(prob, mpi, grad=True, max_nfev=20)
-
-    if mpi.proc0_world:
-        print(f'Done optimization with max_mode = {max_mode}\n'
-              f'Final vmec iteration = {vmec.iter}')
-
-if mpi.proc0_world:
-    output_filename = 'optimization_history.json'
-    with open(output_filename, 'w') as f:
-        json.dump(history, f, indent=4)
-
-    print(f"Data successfully serialized to {output_filename}")
+    least_squares_mpi_solve(prob, mpi, grad=True, save_residuals=True, max_nfev=40)
