@@ -1,22 +1,17 @@
 import glob
 import re
 import sys
-import argparse
 import numpy as np
 from scipy.special import expit as sigmoid
 from simsopt.mhd import Vmec, vmec_compute_geometry
 from simsopt.geo import SurfaceRZFourier
 
-parser = argparse.ArgumentParser(description="Generate Paraview file from the latest VMEC wout file.")
-parser.add_argument("prefix", type=str, help="Prefix of the wout file")
-args = parser.parse_args()
+# file_pattern = "wout_*.nc"
+# files = glob.glob(file_pattern)
 
-file_pattern = f"wout_{args.prefix}_*.nc"
-files = glob.glob(file_pattern)
-
-if not files:
-    print(f"Error: No files found matching pattern {file_pattern}", file=sys.stderr)
-    sys.exit(1)
+# if not files:
+#     print(f"Error: No files found matching pattern {file_pattern}", file=sys.stderr)
+#     sys.exit(1)
 
 
 def extract_suffix(filepath):
@@ -24,11 +19,11 @@ def extract_suffix(filepath):
     return int(match.group(1)) if match else -1
 
 
-config = {'surface_method': 'from_wout'}
-surf_filename = max(files, key=extract_suffix)
-print(f'building paraview plot from {surf_filename}')
+# config = {'surface_method': 'from_wout'}
+# surf_filename = max(files, key=extract_suffix)
+# print(f'building paraview plot from {surf_filename}')
 
-surf_filename = 'wout_nfp4_QH_warm_start_000_000341.nc'
+surf_filename = 'wout_nfp4_QH_warm_start_000_000047.nc'
 v_final = Vmec(surf_filename)
 
 # surface_constructor = getattr(SurfaceRZFourier, config["surface_method"])
@@ -142,19 +137,23 @@ t3_avg = np.mean(t3, axis=0)
 t4_avg = np.mean(t4_deviation, axis=0)
 t5_avg = np.mean(t5, axis=0)
 
-surf.to_vtk(
-    "objectives_nfp4_test",
-    extra_data={
-        't1_outer': t1_outer.T[:, :, None],
-        't2_outer': t2_outer.T[:, :, None],
-        't3_outer': t3_outer.T[:, :, None],
-        't4_outer': t4_outer.T[:, :, None],
-        't5_outer': t5_outer.T[:, :, None],
+extra_data = {
+    'f1': f1[-1, :, :].T[:, :, None],
+    'grad_s2': grad_s2[-1, :, :].T[:, :, None],
+    'grad_alpha_psi': grad_alpha_psi[-1, :, :].T[:, :, None]
+    # 't1_outer': t1_outer.T[:, :, None],
+    # 't2_outer': t2_outer.T[:, :, None],
+    # 't3_outer': t3_outer.T[:, :, None],
+    # 't4_outer': t4_outer.T[:, :, None],
+    # 't5_outer': t5_outer.T[:, :, None],
+    #
+    # 't1_avg': t1_avg.T[:, :, None],
+    # 't2_avg': t2_avg.T[:, :, None],
+    # 't3_avg': t3_avg.T[:, :, None],
+    # 't4_avg': t4_avg.T[:, :, None],
+    # 't5_avg': t5_avg.T[:, :, None]
+}
 
-        't1_avg': t1_avg.T[:, :, None],
-        't2_avg': t2_avg.T[:, :, None],
-        't3_avg': t3_avg.T[:, :, None],
-        't4_avg': t4_avg.T[:, :, None],
-        't5_avg': t5_avg.T[:, :, None]
-    }
-)
+if __name__ == '__main__':
+    print('making paraview file')
+    surf.to_vtk("mod_b-test", extra_data=extra_data)

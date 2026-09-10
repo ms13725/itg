@@ -30,7 +30,7 @@ prob = LeastSquaresProblem.from_tuples([
 ])
 
 for step in range(3):
-    max_mode = step + 1
+    max_mode = step + 2
     vmec.indata.mpol = 2 + step
     vmec.indata.ntor = vmec.indata.mpol
 
@@ -39,4 +39,4 @@ for step in range(3):
                      nmin=-max_mode, nmax=max_mode, fixed=False)
     surf.fix("rc(0,0)")
 
-    least_squares_mpi_solve(prob, mpi, grad=True, save_residuals=True, max_nfev=40)
+    least_squares_mpi_solve(prob, mpi, grad=True, save_residuals=True, max_nfev=3)

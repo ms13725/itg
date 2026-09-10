@@ -8,8 +8,8 @@
 #SBATCH --job-name=ITGRun
 #SBATCH --mail-type=END
 #SBATCH --mail-user=ms13725@nyu.edu
-#SBATCH --output=/scratch/ms13725/codes/nfp4Run/nfp4_run_%j.out
-#SBATCH --error=/scratch/ms13725/codes/nfp4Run/nfp4_run_%j.err
+#SBATCH --output=optim_%j.out
+#SBATCH --error=optim_%j.err
 
 
 # Validate argument count
@@ -22,8 +22,6 @@ FILENAME=$1
 ASPECT=$2
 IOTA=$3
 
-cd /scratch/ms13725/codes/nfp4Run/
-
 module purge && module load singularity-ce/4.3.3
 
 singularity exec \
@@ -33,10 +31,17 @@ singularity exec \
 /share/apps/images/ubuntu-22.04.1.sif \
 /bin/bash << EOF
 
+echo "in singularity env"
+echo "$PWD"
+
 unset -f which
 if [[ -e /ext3/apps/openmpi/4.1.2/env.sh ]]; then source /ext3/apps/openmpi/4.1.2/env.sh; fi
 if [[ -e /ext3/env.sh ]]; then source /ext3/env.sh; fi
 
-mpiexec -n $SLURM_NTASKS python run_optimization.py "$FILENAME" "$ASPECT" "$IOTA"
-
+mpiexec -n $SLURM_NTASKS python /scratch/ms13725/codes/run_optimization.py "$FILENAME" "$ASPECT" "$IOTA" < /dev/null
+echo "starting plotting"
+python /scratch/ms13725/codes/plot_total_obj.py
+python /scratch/ms13725/codes/plot_specific.py ${ASPECT} ${IOTA}
+python /scratch/ms13725/codes/make_paraview.py
+mv total_obj.pdf targets.pdf objectives_heat_map.vts plots/
 EOF

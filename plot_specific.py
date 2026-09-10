@@ -112,5 +112,5 @@ if __name__ == "__main__":
     parser.add_argument("--directory", type=str, default=".", help="Directory containing residuals files")
 
     args = parser.parse_args()
-
+    print('making residual plots')
     plot_combined_residuals(args.aspect_target, args.iota_target, directory=args.directory)

@@ -27,6 +27,9 @@ def plot_combined_simsopt_objectives(directory="."):
     plt.figure(figsize=(10, 6))
     total_evals = 0
 
+    # Expanded color palette just in case you run more than two continuation steps
+    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+
     # 5. Loop through the sorted files and plot
     for i, filepath in enumerate(filepaths):
         # Read and filter the data
@@ -42,6 +45,7 @@ def plot_combined_simsopt_objectives(directory="."):
             valid_data['objective_function'],
             marker='o',
             linestyle='-',
+            # color=colors[i % len(colors)],
             label=f'max_mode = {i + 1}'
         )
 
@@ -66,4 +70,6 @@ def plot_combined_simsopt_objectives(directory="."):
 
 # Run the function. It defaults to the current working directory (".").
 # You can also pass a specific path: plot_combined_simsopt_objectives("/path/to/your/data")
-plot_combined_simsopt_objectives()
+if __name__ == '__main__':
+    print('making total_obj plot')
+    plot_combined_simsopt_objectives()
