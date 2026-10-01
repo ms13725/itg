@@ -23,7 +23,7 @@ def extract_suffix(filepath):
 # surf_filename = max(files, key=extract_suffix)
 # print(f'building paraview plot from {surf_filename}')
 
-surf_filename = 'wout_nfp4_QH_warm_start_000_000047.nc'
+surf_filename = 'wout_nfp4_QH_warm_start_000_000341.nc'
 v_final = Vmec(surf_filename)
 
 # surface_constructor = getattr(SurfaceRZFourier, config["surface_method"])
@@ -88,25 +88,20 @@ f1 = geom.modB
 f2 = (L_ref / (2 * np.sqrt(s_3d) * psi_a)) * B_cross_grad_B_psi / (f1 ** 3)
 
 f3 = -L_ref * sign_psi_a * (
-        (alpha / (2 * np.sqrt(s_3d) * psi_a)) * B_cross_grad_B_psi +
         np.sqrt(s_3d) * B_cross_grad_B_alpha
 ) / (f1 ** 3)
 
 f4 = -L_ref * sign_psi_a * (
-        (alpha / (2 * np.sqrt(s_3d) * psi_a)) * B_cross_kappa_psi +
         np.sqrt(s_3d) * B_cross_kappa_alpha
 ) / (f1 ** 2)
 
 f5 = (L_ref ** 2 / (4 * s_3d)) * grad_s2
 
 f6 = -L_ref ** 2 * sign_psi_a * (
-        (alpha / (4 * s_3d)) * grad_s2 +
         0.5 * grad_alpha_psi / psi_a
 )
 
 f7 = L_ref ** 2 * (
-        (alpha ** 2 / (4 * s_3d)) * grad_s2 +
-        (alpha / psi_a) * grad_alpha_psi +
         s_3d * grad_alpha2
 )
 
@@ -139,8 +134,15 @@ t5_avg = np.mean(t5, axis=0)
 
 extra_data = {
     'f1': f1[-1, :, :].T[:, :, None],
-    'grad_s2': grad_s2[-1, :, :].T[:, :, None],
-    'grad_alpha_psi': grad_alpha_psi[-1, :, :].T[:, :, None]
+    'f2': f2[-1, :, :].T[:, :, None],
+    'f3': f3[-1, :, :].T[:, :, None],
+    'f4': f4[-1, :, :].T[:, :, None],
+    'f5': f5[-1, :, :].T[:, :, None],
+    'f6': f6[-1, :, :].T[:, :, None],
+    'f7': f7[-1, :, :].T[:, :, None],
+
+
+
     # 't1_outer': t1_outer.T[:, :, None],
     # 't2_outer': t2_outer.T[:, :, None],
     # 't3_outer': t3_outer.T[:, :, None],
@@ -156,4 +158,4 @@ extra_data = {
 
 if __name__ == '__main__':
     print('making paraview file')
-    surf.to_vtk("mod_b-test", extra_data=extra_data)
+    surf.to_vtk("uncorrected_features", extra_data=extra_data)

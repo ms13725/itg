@@ -68,25 +68,20 @@ class MultiSurfaceTurbulenceObjective(Optimizable):
             f2 = (L_ref / (2 * np.sqrt(s_val) * psi_a)) * B_cross_grad_B_psi / (f1 ** 3)
 
             f3 = -L_ref * sign_psi_a * (
-                    (alpha / (2 * np.sqrt(s_val) * psi_a)) * B_cross_grad_B_psi +
                     np.sqrt(s_val) * B_cross_grad_B_alpha
             ) / (f1 ** 3)
 
             f4 = -L_ref * sign_psi_a * (
-                    (alpha / (2 * np.sqrt(s_val) * psi_a)) * B_cross_kappa_psi +
                     np.sqrt(s_val) * B_cross_kappa_alpha
             ) / (f1 ** 2)
 
             f5 = (L_ref ** 2 / (4 * s_val)) * grad_s2
 
             f6 = -L_ref ** 2 * sign_psi_a * (
-                    (alpha / (4 * s_val)) * grad_s2 +
                     0.5 * grad_alpha_psi / psi_a
             )
 
             f7 = L_ref ** 2 * (
-                    (alpha ** 2 / (4 * s_val)) * grad_s2 +
-                    (alpha / psi_a) * grad_alpha_psi +
                     s_val * grad_alpha2
             )
 
