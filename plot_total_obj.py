@@ -3,9 +3,11 @@ import matplotlib.pyplot as plt
 import glob
 import os
 import sys
+import argparse
+from wout_info import read_nfp, nfp_label, target_label
 
 
-def plot_combined_simsopt_objectives(directory="."):
+def plot_combined_simsopt_objectives(target, directory="."):
     # 1. Search for all objective files in the specified directory
     file_pattern = os.path.join(directory, "objective_*.dat")
     filepaths = glob.glob(file_pattern)
@@ -57,7 +59,8 @@ def plot_combined_simsopt_objectives(directory="."):
     plt.yscale('log')
     plt.xlabel('Cumulative Function Evaluations')
     plt.ylabel('Total Objective Function')
-    plt.title('Continuation Method Optimization Progress')
+    nfp = read_nfp(os.path.join(directory, "wout_final.nc"))
+    plt.title(f'Optimization Progress ({nfp_label(nfp)}, {target_label(target)})')
     plt.legend()
     plt.grid(True, which="both", linestyle='--', alpha=0.6)
     plt.tight_layout()
@@ -67,5 +70,8 @@ def plot_combined_simsopt_objectives(directory="."):
 # Run the function. It defaults to the current working directory (".").
 # You can also pass a specific path: plot_combined_simsopt_objectives("/path/to/your/data")
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Plot the total objective across continuation steps.")
+    parser.add_argument("target", type=int, help="Turbulence target (1-5) used in the optimization")
+    args = parser.parse_args()
     print('making total_obj plot')
-    plot_combined_simsopt_objectives()
+    plot_combined_simsopt_objectives(args.target)

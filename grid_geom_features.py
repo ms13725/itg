@@ -5,8 +5,13 @@ from simsopt.mhd import vmec_compute_geometry
 
 
 class MultiSurfaceTurbulenceObjective(Optimizable):
-    def __init__(self, vmec, n_surfaces=4, n_theta=16, n_phi=16):
+    def __init__(self, vmec, target=1, n_surfaces=4, n_theta=16, n_phi=16):
         self.vmec = vmec
+
+        # Which turbulence target (1-5) compute_surfaces returns
+        if target not in (1, 2, 3, 4, 5):
+            raise ValueError(f"target must be one of 1-5, got {target}")
+        self.target = target
 
         # Define the radial targets
         self.s_targets = np.linspace(0.2, 0.8, n_surfaces)
@@ -44,7 +49,7 @@ class MultiSurfaceTurbulenceObjective(Optimizable):
 
         # Iterate through the surfaces
         for i, s_val in enumerate(s_1d):
-            iota_val = np.interp(s_val, self.vmec.s_half_grid, self.vmec.wout.iotas[1:])
+            # iota_val = np.interp(s_val, self.vmec.s_half_grid, self.vmec.wout.iotas[1:])
 
             # Extract the 2D surface data for this specific radial depth
             grad_s2 = geom.grad_s_dot_grad_s[i, :, :]
@@ -56,11 +61,11 @@ class MultiSurfaceTurbulenceObjective(Optimizable):
             grad_alpha2 = geom.grad_alpha_dot_grad_alpha[i, :, :]
 
             # Use PEST poloidal angle for straight-field-line coordinates
-            theta_mesh = geom.theta_pest[i, :, :]
-            phi_mesh = geom.phi[i, :, :]
+            # theta_mesh = geom.theta_pest[i, :, :]
+            # phi_mesh = geom.phi[i, :, :]
 
             # Manually construct the field line label grid
-            alpha = theta_mesh - iota_val * phi_mesh
+            # alpha = theta_mesh - iota_val * phi_mesh
 
             # assembling features
             f1 = geom.modB[i, :, :]
@@ -85,13 +90,20 @@ class MultiSurfaceTurbulenceObjective(Optimizable):
                     s_val * grad_alpha2
             )
 
-            target_1 = np.var(sigmoid((f1 ** 2) * f4) * f5 / f1)
-            target_2 = np.mean(sigmoid((f1 ** 2) * f4) * (f5 ** 4) / (f1 ** 2))
-            target_3 = np.mean(sigmoid((f1 ** 2) * f4) * (f5 ** 2) / f1)
-            target_4 = np.var(sigmoid((f1 ** 2) * f4) * (f5 ** 2) / f1)
-            target_5 = np.mean(sigmoid((f1 ** 2) * f4) * (f5 ** 2) / (f1 ** 2))
+            weight = sigmoid((f1 ** 2) * f4)
 
-            target_metrics.append(target_1)
+            if self.target == 1:
+                target_val = np.var(weight * f5 / f1)
+            elif self.target == 2:
+                target_val = np.mean(weight * (f5 ** 4) / (f1 ** 2))
+            elif self.target == 3:
+                target_val = np.mean(weight * (f5 ** 2) / f1)
+            elif self.target == 4:
+                target_val = np.var(weight * (f5 ** 2) / f1)
+            else:
+                target_val = np.mean(weight * (f5 ** 2) / (f1 ** 2))
+
+            target_metrics.append(target_val)
 
         return np.array(target_metrics)
 

@@ -1,29 +1,10 @@
-import glob
-import re
-import sys
 import numpy as np
 from scipy.special import expit as sigmoid
 from simsopt.mhd import Vmec, vmec_compute_geometry
 from simsopt.geo import SurfaceRZFourier
 
-# file_pattern = "wout_*.nc"
-# files = glob.glob(file_pattern)
 
-# if not files:
-#     print(f"Error: No files found matching pattern {file_pattern}", file=sys.stderr)
-#     sys.exit(1)
-
-
-def extract_suffix(filepath):
-    match = re.search(r'_(\d+)\.nc$', filepath)
-    return int(match.group(1)) if match else -1
-
-
-# config = {'surface_method': 'from_wout'}
-# surf_filename = max(files, key=extract_suffix)
-# print(f'building paraview plot from {surf_filename}')
-
-surf_filename = 'wout_nfp4_QH_warm_start_000_000341.nc'
+surf_filename = 'wout_final.nc'
 v_final = Vmec(surf_filename)
 
 # surface_constructor = getattr(SurfaceRZFourier, config["surface_method"])
@@ -78,9 +59,9 @@ grad_alpha_psi = geom.grad_alpha_dot_grad_psi
 grad_alpha2 = geom.grad_alpha_dot_grad_alpha
 
 # Construct the 3D field line label grid
-theta_mesh = geom.theta_pest
-phi_mesh = geom.phi
-alpha = theta_mesh - iota_3d * phi_mesh
+# theta_mesh = geom.theta_pest
+# phi_mesh = geom.phi
+# alpha = theta_mesh - iota_3d * phi_mesh
 
 # Assemble features
 f1 = geom.modB
@@ -133,29 +114,19 @@ t4_avg = np.mean(t4_deviation, axis=0)
 t5_avg = np.mean(t5, axis=0)
 
 extra_data = {
-    'f1': f1[-1, :, :].T[:, :, None],
-    'f2': f2[-1, :, :].T[:, :, None],
-    'f3': f3[-1, :, :].T[:, :, None],
-    'f4': f4[-1, :, :].T[:, :, None],
-    'f5': f5[-1, :, :].T[:, :, None],
-    'f6': f6[-1, :, :].T[:, :, None],
-    'f7': f7[-1, :, :].T[:, :, None],
+    't1_outer': t1_outer.T[:, :, None],
+    't2_outer': t2_outer.T[:, :, None],
+    't3_outer': t3_outer.T[:, :, None],
+    't4_outer': t4_outer.T[:, :, None],
+    't5_outer': t5_outer.T[:, :, None],
 
-
-
-    # 't1_outer': t1_outer.T[:, :, None],
-    # 't2_outer': t2_outer.T[:, :, None],
-    # 't3_outer': t3_outer.T[:, :, None],
-    # 't4_outer': t4_outer.T[:, :, None],
-    # 't5_outer': t5_outer.T[:, :, None],
-    #
-    # 't1_avg': t1_avg.T[:, :, None],
-    # 't2_avg': t2_avg.T[:, :, None],
-    # 't3_avg': t3_avg.T[:, :, None],
-    # 't4_avg': t4_avg.T[:, :, None],
-    # 't5_avg': t5_avg.T[:, :, None]
+    't1_avg': t1_avg.T[:, :, None],
+    't2_avg': t2_avg.T[:, :, None],
+    't3_avg': t3_avg.T[:, :, None],
+    't4_avg': t4_avg.T[:, :, None],
+    't5_avg': t5_avg.T[:, :, None]
 }
 
 if __name__ == '__main__':
     print('making paraview file')
-    surf.to_vtk("uncorrected_features", extra_data=extra_data)
+    surf.to_vtk("objectives_paraview", extra_data=extra_data)

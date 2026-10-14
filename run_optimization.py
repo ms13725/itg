@@ -13,28 +13,43 @@ parser = argparse.ArgumentParser(
 parser.add_argument("vmec_filename", type=str, help="Path to the VMEC input file")
 parser.add_argument("aspect_target", type=float, help="Target aspect ratio")
 parser.add_argument("iota_target", type=float, help="Target mean iota")
-parser.add_argument("helicity_m", type=int, help="hmmm")
-parser.add_argument("helicity_n", type=int, help="ummm")
+parser.add_argument("--target", type=int, default=1, choices=[1, 2, 3, 4, 5],
+                    help="Turbulence target from grid_geom_features (default: 1)")
+parser.add_argument("--helicity-m", type=int, default=None,
+                    help="QS helicity m; omit with --helicity-n to skip quasisymmetry")
+parser.add_argument("--helicity-n", type=int, default=None,
+                    help="QS helicity n; omit with --helicity-m to skip quasisymmetry")
 
 args = parser.parse_args()
+
+use_qs = args.helicity_m is not None or args.helicity_n is not None
+if use_qs and (args.helicity_m is None or args.helicity_n is None):
+    parser.error("--helicity-m and --helicity-n must be given together")
 
 mpi = MpiPartition()
 
 vmec = Vmec(args.vmec_filename, mpi)
 surf = vmec.boundary
 
-qs = QuasisymmetryRatioResidual(vmec,
-                                np.linspace(0.2, 0.8, 4),  # adjust later if needed, currently matching grid_geom_features
-                                helicity_m=args.helicity_m, helicity_n=args.helicity_n)
-turb_obj = MultiSurfaceTurbulenceObjective(vmec)
+turb_obj = MultiSurfaceTurbulenceObjective(vmec, target=args.target)
 
-
-prob = LeastSquaresProblem.from_tuples([
+terms = [
     (vmec.aspect, args.aspect_target, 1),
     (vmec.mean_iota, args.iota_target, 1),
-    (qs.residuals, 0, 1),
-    (turb_obj.J, 0.0, 1),
-])
+]
+if use_qs:
+    qs = QuasisymmetryRatioResidual(vmec,
+                                    np.linspace(0.2, 0.8, 4),  # adjust later if needed, currently matching grid_geom_features
+                                    helicity_m=args.helicity_m, helicity_n=args.helicity_n)
+    terms.append((qs.residuals, 0, 1))
+# turbulence objective must always be the last term
+terms.append((turb_obj.J, 0.0, 1))
+
+prob = LeastSquaresProblem.from_tuples(terms)
+
+if mpi.proc0_world:
+    qs_msg = f"QS on (m={args.helicity_m}, n={args.helicity_n})" if use_qs else "QS off"
+    print(f"turbulence target {args.target}, {qs_msg}")
 
 for step in range(3):
     max_mode = step + 2
