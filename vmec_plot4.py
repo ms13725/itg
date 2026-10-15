@@ -148,7 +148,7 @@ plotNum += 1
 plt.plot(s_half, toroidal_current_inside[1:], '.-', label='buco')
 plt.title('Toroidal current [Amperes] inside $s$')
 plt.xlabel(xLabel)
-# plt.savefig('plot1.jpg')
+plt.savefig('plot1.jpg')
 
 titles = ['|B| [Tesla] at half radius', '|B| [Tesla] at boundary']
 iradii = [int((ns * 0.25).round()), ns - 1]
@@ -212,7 +212,7 @@ for i in range(2):
         plt.plot(phi.T, theta_vmec.T + 2 * np.pi * jshift, 'k')
 
 plt.tight_layout()
-# plt.savefig('plot2.jpg')
+plt.savefig('plot2.jpg')
 
 ########################################################
 # Now make plot of flux surface shapes
@@ -269,7 +269,7 @@ for iphi in range(nphi):
     plt.title(labels[iphi])
 
 plt.tight_layout()
-# plt.savefig('plot3.jpg')
+plt.savefig('plot3.jpg')
 
 ########################################################
 # Now make 3D surface plot
