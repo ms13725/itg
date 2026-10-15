@@ -41,11 +41,19 @@ else
     PLOT_ARGS="$HELICITY_M $HELICITY_N"
 fi
 
+# nfp is fixed by the input file, so read it from there ("NFP = 0004" -> 4)
+NFP=$(grep -iE '^[[:space:]]*NFP[[:space:]]*=' "$FILENAME" | head -1 | sed -E 's/^[^=]*=[[:space:]]*([0-9]+).*/\1/')
+NFP=${NFP:+$((10#$NFP))}
+NFP=${NFP:-unknown}
+
+# Suffix for the plot files moved into plots/, e.g. nfp4_3qs
+SUFFIX="nfp${NFP}_${TARGET}${QS_TAG}"
+
 RUN_DIR="t${TARGET}_${QS_TAG}"
 mkdir -p "${RUN_DIR}/plots"
 cd "${RUN_DIR}"
 
-echo "array task ${TASK}: target ${TARGET}, ${QS_TAG}, running in $(pwd)"
+echo "array task ${TASK}: target ${TARGET}, ${QS_TAG}, nfp ${NFP}, running in $(pwd)"
 
 module purge && module load singularity-ce/4.5.1
 
@@ -67,11 +75,16 @@ echo "starting plotting"
 python ${CODE_DIR}/plot_total_obj.py ${TARGET}
 python ${CODE_DIR}/${PLOT_SCRIPT} ${ASPECT} ${IOTA} ${TARGET} ${PLOT_ARGS}
 python ${CODE_DIR}/make_paraview.py
-for f in total_obj.pdf targets.pdf objectives_paraview.vts boozer.pdf; do
-    if [[ -e "\$f" ]]; then
-        mv "\$f" plots/
+python ${CODE_DIR}/vmec_plot4.py wout_final.nc
+# Move plots into plots/, renamed as <stem>_${SUFFIX}.<ext>
+for pair in total_obj.pdf:total_obj targets.pdf:targets objectives_paraview.vts:paraview boozer.pdf:boozer picture.pdf:picture; do
+    src=\${pair%%:*}
+    stem=\${pair##*:}
+    ext=\${src##*.}
+    if [[ -e "\$src" ]]; then
+        mv "\$src" "plots/\${stem}_${SUFFIX}.\${ext}"
     else
-        echo "skipping \$f (not found)"
+        echo "skipping \$src (not found)"
     fi
 done
 EOF
