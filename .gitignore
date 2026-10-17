@@ -6,3 +6,4 @@
 *.json
 *.pdf
 temp/
+.claude/

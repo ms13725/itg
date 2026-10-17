@@ -75,9 +75,9 @@ echo "starting plotting"
 python ${CODE_DIR}/plot_total_obj.py ${TARGET}
 python ${CODE_DIR}/${PLOT_SCRIPT} ${ASPECT} ${IOTA} ${TARGET} ${PLOT_ARGS}
 python ${CODE_DIR}/make_paraview.py
-python ${CODE_DIR}/vmec_plot4.py wout_final.nc
+python ${CODE_DIR}/plot_surfaces.py ${TARGET}
 # Move plots into plots/, renamed as <stem>_${SUFFIX}.<ext>
-for pair in total_obj.pdf:total_obj targets.pdf:targets objectives_paraview.vts:paraview boozer.pdf:boozer picture.pdf:picture; do
+for pair in total_obj.pdf:total_obj targets.pdf:targets objectives_paraview.vts:paraview boozer.pdf:boozer heatmap.pdf:heatmap plot3.pdf:flux_surfaces; do
     src=\${pair%%:*}
     stem=\${pair##*:}
     ext=\${src##*.}

@@ -9,8 +9,8 @@ Launch the full ITG turbulence optimization sweep for one VMEC input file.
 Submits a 10-task Slurm job array (batch_optim.slurm), one task per run:
   tasks 0-4  turbulence targets 1-5, no quasisymmetry    -> t<N>_noqs/
   tasks 5-9  turbulence targets 1-5, with quasisymmetry  -> t<N>_qs/
-Each task runs run_optimization.py, then plot_total_obj.py, plot_specific_{qs,noqs}.py
-and make_paraview.py. The plots are moved into the run's plots/ subdirectory.
+Each task runs run_optimization.py, then plot_total_obj.py, plot_specific_{qs,noqs}.py,
+make_paraview.py and plot_surfaces.py. The plots are moved into the run's plots/ subdirectory.
 
 Arguments:
   vmec_input   VMEC input file (e.g. vmecInputs/input.nfp4_QH_warm_start)
@@ -20,7 +20,8 @@ Arguments:
   helicity_n   QS helicity n (int), used only by the 5 QS runs (QA: 0, QH: -1)
 
 Output (created in the current directory):
-  optim-<vmec_input name without "input.">/   (e.g. optim-nfp4_QH_warm_start/)
+  optim-<vmec_input name without "input.">-<aspect>-<iota>-<YYYYMMDD_HHMMSS>/
+      (e.g. optim-nfp4_QH_warm_start-6.0-1.2-20261015_143210/)
     optim_<jobid>_<task>.out/.err    slurm logs
     t1_noqs/ ... t5_noqs/  t1_qs/ ... t5_qs/
       <simsopt output, wout_final.nc>
@@ -61,7 +62,7 @@ SCRIPT_DIR=$(dirname "$(realpath "$0")")
 # input file's full path, so no directory in the run path may contain "input."
 RUN_NAME=$(basename "$FILENAME")
 RUN_NAME=${RUN_NAME#input.}
-BASE_DIR="optim-${RUN_NAME}"
+BASE_DIR="optim-${RUN_NAME}-${ASPECT}-${IOTA}-$(date +%Y%m%d_%H%M%S)"
 
 if [[ "$(pwd)/${BASE_DIR}" == *input.* ]]; then
     echo "error: run path '$(pwd)/${BASE_DIR}' contains 'input.', which breaks VMEC output file naming" >&2
