@@ -61,7 +61,7 @@ for step in range(3):
                      nmin=-max_mode, nmax=max_mode, fixed=False)
     surf.fix("rc(0,0)")
 
-    least_squares_mpi_solve(prob, mpi, grad=True, save_residuals=True, max_nfev=3)
+    least_squares_mpi_solve(prob, mpi, grad=True, save_residuals=True, max_nfev=30)
 
 # least_squares_mpi_solve leaves prob.x at the optimum but does not run
 # VMEC there, so no wout file exists for the final point yet. Run it once
