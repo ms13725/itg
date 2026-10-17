@@ -13,14 +13,14 @@ Each task runs run_optimization.py, then plot_total_obj.py, plot_specific_{qs,no
 make_paraview.py and plot_surfaces.py. The plots are moved into the run's plots/ subdirectory.
 
 Arguments:
-  vmec_input   VMEC input file (e.g. vmecInputs/input.nfp4_QH_warm_start)
+  vmec_input   VMEC input file (e.g. inputs/vmec/input.nfp4_QH_warm_start)
   aspect       target aspect ratio (float)
   iota         target mean rotational transform (float)
   helicity_m   QS helicity m (int), used only by the 5 QS runs (e.g. 1)
   helicity_n   QS helicity n (int), used only by the 5 QS runs (QA: 0, QH: -1)
 
-Output (created in the current directory):
-  optim-<vmec_input name without "input.">-<aspect>-<iota>-<YYYYMMDD_HHMMSS>/
+Output (created in runs/ under the code dir, from any working directory):
+  runs/optim-<vmec_input name without "input.">-<aspect>-<iota>-<YYYYMMDD_HHMMSS>/
       (e.g. optim-nfp4_QH_warm_start-6.0-1.2-20261015_143210/)
     optim_<jobid>_<task>.out/.err    slurm logs
     t1_noqs/ ... t5_noqs/  t1_qs/ ... t5_qs/
@@ -28,7 +28,7 @@ Output (created in the current directory):
       plots/
 
 Example (placeholder values):
-  bash $(basename "$0") vmecInputs/input.nfp4_QH_warm_start <aspect> <iota> 1 -1
+  bash scripts/$(basename "$0") inputs/vmec/input.nfp4_QH_warm_start <aspect> <iota> 1 -1
 EOF
 }
 
@@ -57,15 +57,16 @@ HELICITY_N=$5
 
 ABS_PATH=$(realpath "$FILENAME")
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
+RUNS_DIR="$(dirname "$SCRIPT_DIR")/runs"
 
 # VMEC names its output files from everything after the first "input." in the
 # input file's full path, so no directory in the run path may contain "input."
 RUN_NAME=$(basename "$FILENAME")
 RUN_NAME=${RUN_NAME#input.}
-BASE_DIR="optim-${RUN_NAME}-${ASPECT}-${IOTA}-$(date +%Y%m%d_%H%M%S)"
+BASE_DIR="${RUNS_DIR}/optim-${RUN_NAME}-${ASPECT}-${IOTA}-$(date +%Y%m%d_%H%M%S)"
 
-if [[ "$(pwd)/${BASE_DIR}" == *input.* ]]; then
-    echo "error: run path '$(pwd)/${BASE_DIR}' contains 'input.', which breaks VMEC output file naming" >&2
+if [[ "${BASE_DIR}" == *input.* ]]; then
+    echo "error: run path '${BASE_DIR}' contains 'input.', which breaks VMEC output file naming" >&2
     exit 1
 fi
 

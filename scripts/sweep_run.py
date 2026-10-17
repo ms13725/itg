@@ -4,11 +4,12 @@ Launch batch_run.bash once per row of a parameter-sweep CSV.
 
 CSV columns (first line is a header and is skipped):
     vmec_input, aspect, iota, helicity_m, helicity_n
-Relative vmec_input paths are resolved against the CSV's own directory. Blank rows and rows starting with '#' are
-skipped. Every row is checked before anything is submitted. Run from the directory where the optim-* folders
-should be created. Standard library only, so it runs with the login node's python3.
+Relative vmec_input paths are resolved against the code root (e.g. inputs/vmec/input.nfp2_torus), so the CSV can
+live anywhere. Blank rows and rows starting with '#' are skipped. Every row is checked before anything is
+submitted. Run folders go to runs/ under the code root (batch_run.bash decides that), from any working directory.
+Standard library only, so it runs with the login node's python3.
 
-Usage: python3 sweep_run.py <csv> [--dry-run]
+Usage: python3 scripts/sweep_run.py <csv> [--dry-run]
 """
 
 import argparse
@@ -18,7 +19,9 @@ import sys
 import time
 from pathlib import Path
 
-BATCH_RUN = Path(__file__).resolve().parent / 'batch_run.bash'
+SCRIPT_DIR = Path(__file__).resolve().parent
+CODE_ROOT = SCRIPT_DIR.parent
+BATCH_RUN = SCRIPT_DIR / 'batch_run.bash'
 
 
 def read_rows(csv_path):
@@ -35,7 +38,7 @@ def read_rows(csv_path):
     return rows
 
 
-def check_row(fields, csv_dir):
+def check_row(fields):
     """Return (args for batch_run.bash, None) or (None, reason the row is bad)."""
     if len(fields) != 5:
         return None, f'expected 5 columns, got {len(fields)}'
@@ -43,7 +46,7 @@ def check_row(fields, csv_dir):
 
     input_path = Path(vmec_input)
     if not input_path.is_absolute():
-        input_path = csv_dir / input_path
+        input_path = CODE_ROOT / input_path
     if not input_path.is_file():
         return None, f'VMEC input not found: {input_path}'
 
@@ -68,7 +71,7 @@ def main():
 
     runs, errors = [], []
     for line_no, fields in rows:
-        run_args, error = check_row(fields, csv_path.parent)
+        run_args, error = check_row(fields)
         if error:
             errors.append(f'line {line_no}: {error}')
         else:

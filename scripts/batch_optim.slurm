@@ -26,6 +26,7 @@ HELICITY_M=$4
 HELICITY_N=$5
 
 CODE_DIR=/scratch/ms13725/codes
+SRC_DIR=${CODE_DIR}/src
 
 TASK=$SLURM_ARRAY_TASK_ID
 TARGET=$(( TASK % 5 + 1 ))
@@ -70,12 +71,12 @@ unset -f which
 if [[ -e /ext3/apps/openmpi/4.1.2/env.sh ]]; then source /ext3/apps/openmpi/4.1.2/env.sh; fi
 if [[ -e /ext3/env.sh ]]; then source /ext3/env.sh; fi
 
-mpiexec -n $SLURM_NTASKS python ${CODE_DIR}/run_optimization.py "$FILENAME" "$ASPECT" "$IOTA" --target ${TARGET} ${QS_ARGS} < /dev/null
+mpiexec -n $SLURM_NTASKS python ${SRC_DIR}/run_optimization.py "$FILENAME" "$ASPECT" "$IOTA" --target ${TARGET} ${QS_ARGS} < /dev/null
 echo "starting plotting"
-python ${CODE_DIR}/plot_total_obj.py ${TARGET}
-python ${CODE_DIR}/${PLOT_SCRIPT} ${ASPECT} ${IOTA} ${TARGET} ${PLOT_ARGS}
-python ${CODE_DIR}/make_paraview.py
-python ${CODE_DIR}/plot_surfaces.py ${TARGET}
+python ${SRC_DIR}/plot_total_obj.py ${TARGET}
+python ${SRC_DIR}/${PLOT_SCRIPT} ${ASPECT} ${IOTA} ${TARGET} ${PLOT_ARGS}
+python ${SRC_DIR}/make_paraview.py
+python ${SRC_DIR}/plot_surfaces.py ${TARGET}
 # Move plots into plots/, renamed as <stem>_${SUFFIX}.<ext>
 for pair in total_obj.pdf:total_obj targets.pdf:targets objectives_paraview.vts:paraview boozer.pdf:boozer heatmap.pdf:heatmap plot3.pdf:flux_surfaces; do
     src=\${pair%%:*}
