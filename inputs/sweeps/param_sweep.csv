@@ -1,4 +1,4 @@
-nfp,aspect ratio,iota,m,n
+vmec_input,aspect,iota,m,n
 inputs/vmec/input.nfp2_torus,5,0.42,1,0
 inputs/vmec/input.nfp2_torus,7,0.42,1,0
 inputs/vmec/input.nfp2_torus,8,0.42,1,0

@@ -1,0 +1,4 @@
+vmec_input,aspect,iota,m,n
+inputs/vmec/input.nfp2_torus,6,0.42,1,0
+inputs/vmec/input.nfp4_torus,8,1.24,1,-1
+inputs/vmec/input.nfp5_torus,10,1.1,1,-1
