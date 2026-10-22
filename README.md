@@ -114,12 +114,12 @@ order.
 mpiexec python src/run_optimization.py <input> <aspect> <iota> --target N [--helicity-m M --helicity-n N]
 ```
 
-This builds a simsopt `LeastSquaresProblem` with these terms, in this order and all with weight 1:
+This builds a simsopt `LeastSquaresProblem` with these terms, in this order:
 
-1. aspect ratio → `aspect`
-2. mean iota → `iota`
-3. *(QS runs only)* `QuasisymmetryRatioResidual` on s = 0.2, 0.4, 0.6, 0.8 with helicity (m, n) → 0
-4. turbulence proxy → 0. This term is **always last**, because the plot scripts read the last 4 residual columns as
+1. aspect ratio → `aspect`, weight 5
+2. mean iota → `iota`, weight 20
+3. *(QS runs only)* `QuasisymmetryRatioResidual` on s = 0.2, 0.4, 0.6, 0.8 with helicity (m, n) → 0, weight 1
+4. turbulence proxy → 0, weight 1. This term is **always last**, because the plot scripts read the last 4 residual columns as
    the turbulence proxy.
 
 The boundary is optimized in three continuation stages, freeing modes with |m|, |n| ≤ 2, then 3, then 4. VMEC

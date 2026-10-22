@@ -34,8 +34,8 @@ surf = vmec.boundary
 turb_obj = MultiSurfaceTurbulenceObjective(vmec, target=args.target)
 
 terms = [
-    (vmec.aspect, args.aspect_target, 1),
-    (vmec.mean_iota, args.iota_target, 1),
+    (vmec.aspect, args.aspect_target, 5),
+    (vmec.mean_iota, args.iota_target, 20),
 ]
 if use_qs:
     qs = QuasisymmetryRatioResidual(vmec,
