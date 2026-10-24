@@ -23,6 +23,7 @@ Output (created in runs/ under the code dir, from any working directory):
   runs/optim-<vmec_input name without "input.">-<aspect>-<iota>-<YYYYMMDD_HHMMSS>/
       (e.g. optim-nfp4_QH_warm_start-6.0-1.2-20261015_143210/)
     optim_<jobid>_<task>.out/.err    slurm logs
+    run_params.txt                   this run's arguments, read by replot_runs.py
     t1_noqs/ ... t5_noqs/  t1_qs/ ... t5_qs/
       <simsopt output, wout_final.nc>
       plots/
@@ -75,4 +76,6 @@ mkdir -p "${BASE_DIR}"
 echo "made directory: ${BASE_DIR}"
 
 cd "${BASE_DIR}"
+# Record the run's parameters (sweep CSV format) so replot_runs.py can regenerate the plots later
+printf 'vmec_input,aspect,iota,m,n\n%s,%s,%s,%s,%s\n' "$ABS_PATH" "$ASPECT" "$IOTA" "$HELICITY_M" "$HELICITY_N" > run_params.txt
 sbatch "${SCRIPT_DIR}/batch_optim.slurm" "$ABS_PATH" "$ASPECT" "$IOTA" "$HELICITY_M" "$HELICITY_N"

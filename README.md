@@ -14,7 +14,10 @@ A CSV of parameter sets can launch many of these sweeps at once.
 scripts/                 what you run / submit
   batch_run.bash         one input + targets → one 10-task job array
   batch_optim.slurm      the job array: optimization + post-processing for one task
+  postprocess.bash       all plotting for one finished run (called by batch_optim.slurm and replot.slurm)
   sweep_run.py           CSV of parameter sets → one batch_run.bash call per row
+  replot_runs.py         regenerate the plots of finished optim-* folders → one replot.slurm job per folder
+  replot.slurm           post-processing only (no optimization) for every run in one optim-* folder
 src/                     python run by the jobs
   run_optimization.py    builds and solves the least-squares problem
   grid_geom_features.py  turbulence proxy objective (targets 1–5)
@@ -84,6 +87,28 @@ inputs/vmec/input.nfp4_torus,6,1.24,1,-1
 - `sweep_run.py` uses only the Python standard library, so it runs with the login node's `python3` outside the
   container.
 
+### Regenerating plots
+
+After changing a plot script, the plots of finished runs can be remade without re-optimizing:
+
+```bash
+python3 scripts/replot_runs.py runs/optim-nfp4_torus-8-1.24-20261022_135400 --dry-run   # print what it would submit
+python3 scripts/replot_runs.py runs/optim-nfp4_torus-8-1.24-20261022_135400             # one sweep folder
+python3 scripts/replot_runs.py --all                                                     # every optim-* in runs/
+```
+
+- `replot_runs.py` (login node, standard library only) submits one small `replot.slurm` job per optim-* folder,
+  from inside that folder, so its `replot_<jobid>.out/.err` logs land there.
+- `replot.slurm` sets up the same singularity environment as the optimization jobs. For each `t<N>_noqs/` and
+  `t<N>_qs/` with a `wout_final.nc`, it runs `postprocess.bash`, the same plotting script the optimization jobs
+  use. Runs without a `wout_final.nc` are skipped. nfp is read from `wout_final.nc`.
+- Plots in `plots/` are overwritten with the same names.
+- **Where the parameters come from:** aspect, iota, m and n are read from the folder's `run_params.txt`. For
+  folders made before that file existed, aspect and iota come from the folder name, and m and n from the
+  `QS on (m=.., n=..)` line in the `optim_*.out` logs.
+- Every folder is checked before anything is submitted.
+- One folder can also be replotted by hand: `cd <optim-dir> && sbatch /scratch/ms13725/codes/scripts/replot.slurm <optim-dir> 8 1.24 1 -1`.
+
 > **No directory in a run path may contain `input.`** VMEC names its output files from everything after the first
 > `input.` in the input file's *full path*. Such a directory gives a `cdfcrt ... nf_create` error and no wout file.
 > `batch_run.bash` strips the `input.` prefix from folder names and refuses to run if the path would still contain it.
@@ -146,7 +171,8 @@ The exact feature definitions and normalizations are in `src/grid_geom_features.
 
 ### 5. Post-processing
 
-All of these run in the task's run folder after the optimization:
+`scripts/postprocess.bash` runs all of these in the task's run folder after the optimization (and again for
+[regenerated plots](#regenerating-plots)):
 
 | Step | Script                                     | Writes |
 |------|--------------------------------------------|--------|
@@ -163,6 +189,8 @@ Finally, each file is moved into `plots/` and renamed `<stem>_nfp<NFP>_<N><qs|no
 ```
 runs/optim-<name>-<aspect>-<iota>-<timestamp>/
   optim_<jobid>_<task>.out / .err     slurm logs, one pair per array task
+  run_params.txt                      the run's arguments (vmec_input,aspect,iota,m,n), read by replot_runs.py
+  replot_<jobid>.out / .err           logs of any replot.slurm jobs
   t1_noqs/ … t5_noqs/  t1_qs/ … t5_qs/
     objective_*.dat, residuals_*.dat  simsopt history, one file per continuation stage
     wout_*.nc                         VMEC outputs from the optimization
@@ -180,6 +208,11 @@ Files in `plots/`, shown with the example suffix `_nfp4_3qs` (nfp 4, target 3, Q
 | `paraview_nfp4_3qs.vts`      | boundary surface with all targets as arrays `t1_outer … t5_outer` (value on s = 1) and `t1_avg … t5_avg` (radial average) |
 | `heatmap_nfp4_3qs.pdf`       | 3D boundary colored by the run's own target: on the boundary (left) and radially averaged (right). For targets 1 and 4 the color is the squared deviation from the surface mean |
 | `flux_surfaces_nfp4_3qs.pdf` | cross sections at φ = 0, ¼, ½, ¾ field period: boundary overlay + 10 nested surfaces with the magnetic axis |
+
+In the convergence plots (`total_obj`, `targets`), values above a cutoff are drawn at the cutoff as red ▲ (labeled
+"clipped" in the legend), so early spikes don't set the axis range. The cutoffs are total objective 100, aspect
+ratio 20, turbulence 10 and QS 10, set as constants at the top of each plot script. The turbulence and QS panels
+use a log axis.
 
 A line `skipping <file> (not found)` in a task's `.out` means that plot wasn't produced. The traceback is in the
 matching `.err`.

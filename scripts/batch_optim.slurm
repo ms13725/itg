@@ -33,12 +33,10 @@ TARGET=$(( TASK % 5 + 1 ))
 if (( TASK < 5 )); then
     QS_TAG=noqs
     QS_ARGS=""
-    PLOT_SCRIPT=plot_specific_noqs.py
     PLOT_ARGS=""
 else
     QS_TAG=qs
     QS_ARGS="--helicity-m $HELICITY_M --helicity-n $HELICITY_N"
-    PLOT_SCRIPT=plot_specific_qs.py
     PLOT_ARGS="$HELICITY_M $HELICITY_N"
 fi
 
@@ -46,9 +44,6 @@ fi
 NFP=$(grep -iE '^[[:space:]]*NFP[[:space:]]*=' "$FILENAME" | head -1 | sed -E 's/^[^=]*=[[:space:]]*([0-9]+).*/\1/')
 NFP=${NFP:+$((10#$NFP))}
 NFP=${NFP:-unknown}
-
-# Suffix for the plot files moved into plots/, e.g. nfp4_3qs
-SUFFIX="nfp${NFP}_${TARGET}${QS_TAG}"
 
 RUN_DIR="t${TARGET}_${QS_TAG}"
 mkdir -p "${RUN_DIR}/plots"
@@ -72,20 +67,5 @@ if [[ -e /ext3/apps/openmpi/4.1.2/env.sh ]]; then source /ext3/apps/openmpi/4.1.
 if [[ -e /ext3/env.sh ]]; then source /ext3/env.sh; fi
 
 mpiexec -n $SLURM_NTASKS python ${SRC_DIR}/run_optimization.py "$FILENAME" "$ASPECT" "$IOTA" --target ${TARGET} ${QS_ARGS} < /dev/null
-echo "starting plotting"
-python ${SRC_DIR}/plot_total_obj.py ${TARGET}
-python ${SRC_DIR}/${PLOT_SCRIPT} ${ASPECT} ${IOTA} ${TARGET} ${PLOT_ARGS}
-python ${SRC_DIR}/make_paraview.py
-python ${SRC_DIR}/plot_surfaces.py ${TARGET}
-# Move plots into plots/, renamed as <stem>_${SUFFIX}.<ext>
-for pair in total_obj.pdf:total_obj targets.pdf:targets objectives_paraview.vts:paraview boozer.pdf:boozer heatmap.pdf:heatmap plot3.pdf:flux_surfaces; do
-    src=\${pair%%:*}
-    stem=\${pair##*:}
-    ext=\${src##*.}
-    if [[ -e "\$src" ]]; then
-        mv "\$src" "plots/\${stem}_${SUFFIX}.\${ext}"
-    else
-        echo "skipping \$src (not found)"
-    fi
-done
+bash ${CODE_DIR}/scripts/postprocess.bash ${TARGET} ${ASPECT} ${IOTA} ${NFP} ${PLOT_ARGS}
 EOF

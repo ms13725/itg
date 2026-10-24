@@ -4,7 +4,10 @@ import glob
 import os
 import sys
 import argparse
-from wout_info import read_nfp, nfp_label, target_label
+from wout_info import read_nfp, nfp_label, target_label, plot_clipped, add_clipped_legend
+
+# Objective values above this are drawn at the cutoff as red triangles
+OBJ_CUTOFF = 100
 
 
 def plot_combined_simsopt_objectives(target, directory="."):
@@ -39,9 +42,11 @@ def plot_combined_simsopt_objectives(target, directory="."):
         valid_data['adjusted_eval'] = valid_data['function_evaluation'] + total_evals
 
         # Plot this specific continuation step
-        plt.plot(
+        plot_clipped(
+            plt.gca(),
             valid_data['adjusted_eval'],
             valid_data['objective_function'],
+            OBJ_CUTOFF,
             marker='o',
             linestyle='-',
             label=f'loop iteration = {i + 1}'
@@ -61,7 +66,7 @@ def plot_combined_simsopt_objectives(target, directory="."):
     plt.ylabel('Total Objective Function')
     nfp = read_nfp(os.path.join(directory, "wout_final.nc"))
     plt.title(f'Optimization Progress ({nfp_label(nfp)}, {target_label(target)})')
-    plt.legend()
+    add_clipped_legend(plt.gca(), OBJ_CUTOFF)
     plt.grid(True, which="both", linestyle='--', alpha=0.6)
     plt.tight_layout()
     plt.savefig('total_obj.pdf')

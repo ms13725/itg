@@ -5,7 +5,11 @@ import glob
 import os
 import sys
 import argparse
-from wout_info import read_nfp, nfp_label, target_label
+from wout_info import read_nfp, nfp_label, target_label, plot_clipped, add_clipped_legend
+
+# Values above these are drawn at the cutoff as red triangles
+ASPECT_CUTOFF = 20
+TURB_CUTOFF = 10
 
 
 def plot_combined_residuals(aspect_target, iota_target, target, directory="."):
@@ -52,9 +56,11 @@ def plot_combined_residuals(aspect_target, iota_target, target, directory="."):
         valid_data['turbulence_norm'] = np.linalg.norm(valid_data[turb_columns].values, axis=1)
 
         # Plot Subplot 1: Aspect Ratio
-        axs[0].plot(
+        plot_clipped(
+            axs[0],
             valid_data['adjusted_eval'],
             valid_data['aspect_ratio_actual'],
+            ASPECT_CUTOFF,
             marker='o',
             linestyle='-',
             label=f'loop iteration = {i + 1}'
@@ -69,9 +75,11 @@ def plot_combined_residuals(aspect_target, iota_target, target, directory="."):
         )
 
         # Plot Subplot 3: Geometric Turbulence components
-        axs[2].plot(
+        plot_clipped(
+            axs[2],
             valid_data['adjusted_eval'],
             valid_data['turbulence_norm'],
+            TURB_CUTOFF,
             marker='o',
             linestyle='-'
         )
@@ -90,7 +98,7 @@ def plot_combined_residuals(aspect_target, iota_target, target, directory="."):
     axs[0].axhline(y=aspect_target, color='r', linestyle='--', label=f'Target ({aspect_target})')
     axs[0].set_ylabel('Aspect Ratio')
     axs[0].set_title('Aspect Ratio Convergence')
-    axs[0].legend()
+    add_clipped_legend(axs[0], ASPECT_CUTOFF)
     axs[0].grid(True, linestyle='--', alpha=0.6)
 
     # 6. Format the Mean Iota Subplot
@@ -100,13 +108,13 @@ def plot_combined_residuals(aspect_target, iota_target, target, directory="."):
     axs[1].legend()
     axs[1].grid(True, linestyle='--', alpha=0.6)
 
-    # 7. Format the Geometric Turbulence Subplot
-    axs[2].axhline(y=0.0, color='r', linestyle='--', label=f'Target (0.0)')
+    # 7. Format the Geometric Turbulence Subplot (target is 0, so use a log axis)
+    axs[2].set_yscale('log')
     axs[2].set_ylabel('Turbulence Proxy Norm')
     axs[2].set_title('Turbulence Proxy Norm Convergence')
     axs[2].set_xlabel('Cumulative Function Evaluations')
-    axs[2].legend()
-    axs[2].grid(True, linestyle='--', alpha=0.6)
+    add_clipped_legend(axs[2], TURB_CUTOFF)
+    axs[2].grid(True, which='both', linestyle='--', alpha=0.6)
 
     # Label the figure with the device's field-period count
     nfp = read_nfp(os.path.join(directory, "wout_final.nc"))
