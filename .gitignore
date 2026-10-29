@@ -9,3 +9,4 @@ temp/
 .claude/
 woutEx/
 runs/
+__pycache__/
